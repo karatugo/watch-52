@@ -6,13 +6,28 @@ import datetime
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, jsonify
+import todoist
+import requests
 
 app = Flask(__name__)
 load_dotenv()
 ia = imdb.IMDb()
 
 # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
-app.secret_key = os.getenv("SECRETKEY")
+app.secret_key = os.getenv("SECRET_KEY")
+
+
+@app.route("/add-todoist", methods=["POST", "GET"])
+def add_todoist():
+    if request.method == "POST":
+        try:
+            test_token = os.getenv("TODOIST_TEST_TOKEN")
+            todoist_auth_url = "https://todoist.com/oauth/authorize?client_id=" + os.getenv("TODOIST_CLIENT_ID") +"&scope=data:read,data:delete&state=" + app.secret_key
+            return redirect(todoist_auth_url)
+        except Exception as e:
+            print(e)
+            return "fail"
+
 
 def generate_movie_data(top_movies, random_numbers):
     today = datetime.date.today()
@@ -48,6 +63,18 @@ def search_imdb():
         return render_template("movies.html", head_title="Your Movies", movies=movie_data)
     else:
         return redirect("/")
+
+@app.route('/todoist-success', methods=["POST", "GET"])
+def todoist_success():
+    print(request)
+    state = request.args.get("state")
+    code = request.args.get("code")
+    # api = todoist.TodoistAPI(request["code"])
+    # project = api.projects.add("watch-52")
+    # task = api.items.add('task', project_id=project['id'])
+    # task.update(due={'string': 'tomorrow at 1:00'})
+    # api.commit()
+    return render_template("success.html", head_title="Your Todoist tasks are created.")
 
 @app.route('/error', methods=["POST", "GET"])
 def error():
