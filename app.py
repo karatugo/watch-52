@@ -1,18 +1,37 @@
-import os
-import re
-import imdb
-import random
 import datetime
+import imdb
+import json
+import os
+import random
+import requests
+import todoist
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
 load_dotenv()
 ia = imdb.IMDb()
+session_movies = []
 
 # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
-app.secret_key = os.getenv("SECRETKEY")
+app.secret_key = os.getenv("SECRET_KEY")
+head_title = "Watch 52"
+
+
+@app.route("/add-todoist", methods=["POST", "GET"])
+def add_todoist():
+    if request.method == "POST":
+        try:
+            # test_token = os.getenv("TODOIST_TEST_TOKEN")
+            todoist_auth_url = "https://todoist.com/oauth/authorize?client_id=" + \
+                os.getenv("TODOIST_CLIENT_ID") + \
+                "&scope=data:read_write,data:delete&state=" + app.secret_key
+            return redirect(todoist_auth_url)
+        except Exception as e:
+            print(e)
+            return "fail"
+
 
 def generate_movie_data(top_movies, random_numbers):
     today = datetime.date.today()
@@ -21,13 +40,16 @@ def generate_movie_data(top_movies, random_numbers):
     for n in random_numbers:
         movie_data.append(
             {
-            "week": week_number,
-            "title": top_movies[n],
-            "due_date": today + datetime.timedelta(days=7*week_number)
+                "due_date": str(today + datetime.timedelta(days=7*week_number)),
+                "rating": top_movies[n]["rating"],
+                "title": top_movies[n]["title"],
+                "week": week_number,
+                "year": top_movies[n]["year"],
             })
 
         week_number += 1
     return movie_data
+
 
 def get_movie_data():
     top_movies = ia.get_top250_movies()
@@ -35,11 +57,13 @@ def get_movie_data():
     movie_data = generate_movie_data(top_movies, random_numbers)
     return movie_data
 
+
 @app.route("/movies", methods=["POST", "GET"])
 def search_imdb():
     if request.method == "POST":
         try:
             movie_data = get_movie_data()
+            session['movie_data'] = movie_data # json.dumps(movie_data, indent=4, sort_keys=True, default=str)
         except imdb.IMDbError as e:
             return redirect(url_for("error", error=e))
         except Exception as e:
@@ -49,14 +73,50 @@ def search_imdb():
     else:
         return redirect("/")
 
+
+@app.route('/todoist-success', methods=["POST", "GET"])
+def todoist_success():
+    # print(request)
+    state = request.args.get("state")
+    if state != app.secret_key:
+        return render_template("error.html",
+                               head_title=head_title,
+                               error="authorization error")
+
+    code = request.args.get("code")
+    url = 'https://todoist.com/oauth/access_token'
+    todoist_auth_data = {
+        'client_id': os.getenv("TODOIST_CLIENT_ID"),
+        'client_secret': os.getenv("TODOIST_CLIENT_SECRET"),
+        'code': code
+        }
+
+    response = requests.post(url, data=todoist_auth_data)
+    response = response.json()
+    access_token = response["access_token"]
+
+    if "movie_data" in session:
+        api = todoist.TodoistAPI(access_token)
+        project = api.projects.add("watch-52")
+
+        for m in session['movie_data']:
+            task = api.items.add(m["title"], project_id=project['id'], due={'string': m["due_date"]})
+            # task.update(due={'string': m["due_date"]})
+        api.commit()
+
+    return render_template("success.html",
+                           head_title="Your Todoist tasks are created.")
+
+
 @app.route('/error', methods=["POST", "GET"])
 def error():
     error = request.args["error"]
-    return render_template("error.html", head_title="Watch 52", error=error)
+    return render_template("error.html", head_title=head_title, error=error)
+
 
 @app.route('/', methods=["POST", "GET"])
 def index():
-    return render_template("index.html", head_title="Watch 52")
+    return render_template("index.html", head_title=head_title)
 
 
 if __name__ == '__main__':
