@@ -92,6 +92,17 @@ def fetch_access_token(code):
         return redirect(url_for("error", error=e))
 
 
+def create_todoist_tasks(access_token):
+    api = todoist.TodoistAPI(access_token)
+    project = api.projects.add("Watch 52")
+
+    for m in session['movie_data']:
+        api.items.add(m["title"],
+                      project_id=project['id'],
+                      due={'string': m["due_date"]})
+    api.commit()
+
+
 @app.route('/todoist-success', methods=["POST", "GET"])
 def todoist_success():
     state = request.args.get("state")
@@ -108,14 +119,7 @@ def todoist_success():
                                error="authorization error")
 
     if "movie_data" in session:
-        api = todoist.TodoistAPI(access_token)
-        project = api.projects.add("watch-52")
-
-        for m in session['movie_data']:
-            api.items.add(m["title"],
-                          project_id=project['id'],
-                          due={'string': m["due_date"]})
-        api.commit()
+        create_todoist_tasks(access_token)
     else:
         return render_template("error.html",
                                head_title=head_title,
