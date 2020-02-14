@@ -11,6 +11,8 @@
                         <tr>
                             <th scope="col">#</th>
                             <th scope="col">Movie Title</th>
+                            <th scope="col">Year</th>
+                            <th scope="col">IMDB Rating</th>
                             <th scope="col">Watch this one until</th>
                         </tr>
                     </thead>
@@ -19,6 +21,8 @@
                         <tr>
                             <th scope="row">{{ m.week }}</th>
                             <td>{{ m.title }}</td>
+                            <td>{{ m.year }}</td>
+                            <td>{{ m.rating }}</td>
                             <td>{{ m.due_date }}</td>
                         </tr>
                         {% endfor %}
