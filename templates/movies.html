@@ -2,35 +2,36 @@
 
 {% block body %}
 <div class="content">
-    <h1 style="text-align: center;">Your Movies</h1>
-    <div class="form">
+    <h3 style="text-align: center;">Your Movies</h3>
+    <div class="form" style="text-align: center;margin-bottom: 20px;">
         <form action="/add-todoist" method="POST">
-            <p>
-                <table class="table">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Movie Title</th>
-                            <th scope="col">Year</th>
-                            <th scope="col">IMDB Rating</th>
-                            <th scope="col">Watch this one until</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m in movies %}
-                        <tr>
-                            <th scope="row">{{ m.week }}</th>
-                            <td>{{ m.title }}</td>
-                            <td>{{ m.year }}</td>
-                            <td>{{ m.rating }}</td>
-                            <td>{{ m.due_date }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </p>
-            <input type="submit" value="Add to Todoist">
+            <p>This will create 52 tasks with due dates one week apart in a seperate project.</p>
+            <input type="submit" value="Add them to Todoist">
         </form>
     </div>
+    <table class="table">
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Movie Title</th>
+                <th scope="col">Year</th>
+                <th scope="col">IMDB Rating</th>
+                <th scope="col">Watch this one until</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in movies %}
+            <tr>
+                <th scope="row">{{ m.week }}</th>
+                <td>{{ m.title }}</td>
+                <td>{{ m.year }}</td>
+                <td>{{ m.rating }}</td>
+                <td>{{ m.due_date }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+
 </div>
 {% endblock %}

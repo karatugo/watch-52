@@ -1,5 +1,12 @@
-{% extends "index.html" %}
+{% extends "base.html" %}
 
-{% block extra_content %}
-<p>Yaaay! All done! Check your tasks out <a href='https://todoist.com/app'>here.</a></p>
+{% block body %}
+<div class="content">
+    <div class="jumbotron">
+        <h3 class="display-4">{{ head_title }}</h3>
+        <div class="alert alert-success" role="alert">
+            <p>Yaaay! All done! Check your tasks out <a href='https://todoist.com/app'>here.</a> See you next year for the new list!</p>
+          </div>
+    </div>
+</div>
 {% endblock %}

@@ -15,7 +15,7 @@ session_movies = []
 
 # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
 app.secret_key = os.getenv("SECRET_KEY")
-head_title = "Watch 52"
+head_title = "Welcome to Watch 52!"
 
 
 @app.route("/add-todoist", methods=["POST", "GET"])
@@ -75,6 +75,23 @@ def search_imdb():
         return redirect("/")
 
 
+def fetch_access_token(code):
+    url = 'https://todoist.com/oauth/access_token'
+    todoist_auth_data = {
+        'client_id': os.getenv("TODOIST_CLIENT_ID"),
+        'client_secret': os.getenv("TODOIST_CLIENT_SECRET"),
+        'code': code
+    }
+
+    try:
+        response = requests.post(url, data=todoist_auth_data)
+        response = response.json()
+        access_token = response["access_token"]
+        return access_token
+    except Exception as e:
+        return redirect(url_for("error", error=e))
+
+
 @app.route('/todoist-success', methods=["POST", "GET"])
 def todoist_success():
     state = request.args.get("state")
@@ -83,17 +100,12 @@ def todoist_success():
                                head_title=head_title,
                                error="authorization error")
 
-    code = request.args.get("code")
-    url = 'https://todoist.com/oauth/access_token'
-    todoist_auth_data = {
-        'client_id': os.getenv("TODOIST_CLIENT_ID"),
-        'client_secret': os.getenv("TODOIST_CLIENT_SECRET"),
-        'code': code
-    }
-
-    response = requests.post(url, data=todoist_auth_data)
-    response = response.json()
-    access_token = response["access_token"]
+    try:
+        access_token = fetch_access_token(request.args.get("code"))
+    except Exception:
+        return render_template("error.html",
+                               head_title=head_title,
+                               error="authorization error")
 
     if "movie_data" in session:
         api = todoist.TodoistAPI(access_token)
@@ -104,6 +116,10 @@ def todoist_success():
                           project_id=project['id'],
                           due={'string': m["due_date"]})
         api.commit()
+    else:
+        return render_template("error.html",
+                               head_title=head_title,
+                               error="session error")
 
     return render_template("success.html",
                            head_title="Your Todoist tasks are created.")
