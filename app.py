@@ -1,13 +1,12 @@
 import datetime
 import imdb
-import json
 import os
 import random
 import requests
 import todoist
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
 load_dotenv()
@@ -16,38 +15,38 @@ session_movies = []
 
 # https://flask.palletsprojects.com/en/1.1.x/quickstart/#sessions
 app.secret_key = os.getenv("SECRET_KEY")
-head_title = "Watch 52"
+head_title = "Welcome to Watch 52!"
 
 
 @app.route("/add-todoist", methods=["POST", "GET"])
 def add_todoist():
     if request.method == "POST":
         try:
-            # test_token = os.getenv("TODOIST_TEST_TOKEN")
-            todoist_auth_url = "https://todoist.com/oauth/authorize?client_id=" + \
-                os.getenv("TODOIST_CLIENT_ID") + \
-                "&scope=data:read_write,data:delete&state=" + app.secret_key
+            todoist_auth_url = "https://todoist.com/oauth/authorize" + \
+                f"?client_id={os.getenv('TODOIST_CLIENT_ID')}" + \
+                f"&scope=data:read_write&state={app.secret_key}"
             return redirect(todoist_auth_url)
         except Exception as e:
-            print(e)
-            return "fail"
+            return redirect(url_for("error", error=e))
 
 
 def generate_movie_data(top_movies, random_numbers):
     today = datetime.date.today()
     week_number = 1
     movie_data = []
+
     for n in random_numbers:
+        due = today + datetime.timedelta(days=7*week_number)
         movie_data.append(
             {
-                "due_date": str(today + datetime.timedelta(days=7*week_number)),
+                "due_date": str(due),
                 "rating": top_movies[n]["rating"],
                 "title": top_movies[n]["title"],
                 "week": week_number,
                 "year": top_movies[n]["year"],
             })
-
         week_number += 1
+
     return movie_data
 
 
@@ -63,46 +62,68 @@ def search_imdb():
     if request.method == "POST":
         try:
             movie_data = get_movie_data()
-            session['movie_data'] = movie_data # json.dumps(movie_data, indent=4, sort_keys=True, default=str)
+            session['movie_data'] = movie_data
         except imdb.IMDbError as e:
             return redirect(url_for("error", error=e))
         except Exception as e:
             return redirect(url_for("error", error=e))
 
-        return render_template("movies.html", head_title="Your Movies", movies=movie_data)
+        return render_template("movies.html",
+                               head_title="Your Movies",
+                               movies=movie_data)
     else:
         return redirect("/")
 
 
+def fetch_access_token(code):
+    url = 'https://todoist.com/oauth/access_token'
+    todoist_auth_data = {
+        'client_id': os.getenv("TODOIST_CLIENT_ID"),
+        'client_secret': os.getenv("TODOIST_CLIENT_SECRET"),
+        'code': code
+    }
+
+    try:
+        response = requests.post(url, data=todoist_auth_data)
+        response = response.json()
+        access_token = response["access_token"]
+        return access_token
+    except Exception as e:
+        return redirect(url_for("error", error=e))
+
+
+def create_todoist_tasks(access_token):
+    api = todoist.TodoistAPI(access_token)
+    project = api.projects.add("Watch 52")
+
+    for m in session['movie_data']:
+        api.items.add(m["title"],
+                      project_id=project['id'],
+                      due={'string': m["due_date"]})
+    api.commit()
+
+
 @app.route('/todoist-success', methods=["POST", "GET"])
 def todoist_success():
-    # print(request)
     state = request.args.get("state")
     if state != app.secret_key:
         return render_template("error.html",
                                head_title=head_title,
                                error="authorization error")
 
-    code = request.args.get("code")
-    url = 'https://todoist.com/oauth/access_token'
-    todoist_auth_data = {
-        'client_id': os.getenv("TODOIST_CLIENT_ID"),
-        'client_secret': os.getenv("TODOIST_CLIENT_SECRET"),
-        'code': code
-        }
-
-    response = requests.post(url, data=todoist_auth_data)
-    response = response.json()
-    access_token = response["access_token"]
+    try:
+        access_token = fetch_access_token(request.args.get("code"))
+    except Exception:
+        return render_template("error.html",
+                               head_title=head_title,
+                               error="authorization error")
 
     if "movie_data" in session:
-        api = todoist.TodoistAPI(access_token)
-        project = api.projects.add("watch-52")
-
-        for m in session['movie_data']:
-            task = api.items.add(m["title"], project_id=project['id'], due={'string': m["due_date"]})
-            # task.update(due={'string': m["due_date"]})
-        api.commit()
+        create_todoist_tasks(access_token)
+    else:
+        return render_template("error.html",
+                               head_title=head_title,
+                               error="session error")
 
     return render_template("success.html",
                            head_title="Your Todoist tasks are created.")

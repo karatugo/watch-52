@@ -1,20 +1,16 @@
-{% extends "base.html" %}
-
-{% block body %}
+{% extends "base.html" %} {% block body %}
 <div class="content">
-    <h1 style="text-align: center;">W</h1>
-    <div class="form" style="text-align: center;">
+    <div class="jumbotron">
+        <h3 class="display-4">{{ head_title }}</h3>
+        <p class="lead">We will find you great movies for the next year.</p>
+        <hr class="my-4"> {% if error %}
+        <p>We just had a problem. Please try again.</p>
+        <p>Error details: {{ error }}</p>
+        {% else %}
+        <p>You can add these movies as <a href='https://todoist.com' target="_blank">Todoist</a> tasks if you wish to follow your progress closely.</p>
+        {% endif %}
         <form action="/movies" method="POST">
-            <p>
-                We will choose you 52 great movies for the next 52 weeks. 
-                You can add these movies as Todoist tasks if you wish 
-                to follow your progress closely.
-                
-            </p>
-            {% if error %}
-            <p>We just had a {{ error }} problem. Please try again.</p>
-            {%endif %}
-            <input type="submit" value="Search">
+            <input class="btn btn-primary btn-lg" type="submit" value="Find great movies!">
         </form>
     </div>
 </div>
