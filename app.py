@@ -108,25 +108,24 @@ def create_todoist_tasks(access_token):
 def todoist_success():
     state = request.args.get("state")
     if state != app.secret_key:
-        return render_template("error.html",
-                               head_title=head_title,
-                               error="authorization error")
+        return redirect(url_for("error", error="authorization error"))
 
     try:
         access_token = fetch_access_token(request.args.get("code"))
     except Exception:
-        return render_template("error.html",
-                               head_title=head_title,
-                               error="authorization error")
+        return redirect(url_for("error", error="authorization error"))
 
     if "movie_data" in session:
         create_todoist_tasks(access_token)
     else:
-        return render_template("error.html",
-                               head_title=head_title,
-                               error="session error")
+        return redirect(url_for("error", error="session error"))
 
-    return render_template("success.html",
+    return redirect(url_for("success"))
+
+
+@app.route('/success', methods=["GET"])
+def success():
+    return render_template("success.html", 
                            head_title="Your Todoist tasks are created.")
 
 
@@ -142,11 +141,5 @@ def index():
 
 
 if __name__ == '__main__':
-    # When running locally, disable OAuthlib's HTTPs verification.
-    # ACTION ITEM for developers:
-    #     When running in production *do not* leave this option enabled.
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    app.run(debug=True)
 
-    # Specify a hostname and port that are set as a valid redirect URI
-    # for your API project in the Google API Console.
-    app.run('localhost', 8080, debug=True)
