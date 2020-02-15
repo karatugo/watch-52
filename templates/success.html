@@ -1,12 +1,11 @@
-{% extends "base.html" %}
-
-{% block body %}
+{% extends "base.html" %} {% block body %}
 <div class="content">
     <div class="jumbotron">
         <h3 class="display-4">{{ head_title }}</h3>
         <div class="alert alert-success" role="alert">
-            <p>Yaaay! All done! Check your tasks out <a href='https://todoist.com/app'>here.</a> See you next year for the new list!</p>
-          </div>
+            <p>Yaaay! All done! Check your tasks out <a href='https://todoist.com/app' target="_appblank">here.</a> See you next year for the new list!</p>
+        </div>
+        <p>Start all over again <a href='/'>here.</a></p>
     </div>
 </div>
 {% endblock %}
